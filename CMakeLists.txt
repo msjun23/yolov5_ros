@@ -12,6 +12,19 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  message_generation
+)
+
+add_message_files(
+  FILES
+    BoundingBox.msg
+    BoundingBoxes.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+    sensor_msgs
+    std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
