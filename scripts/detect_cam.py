@@ -1,11 +1,5 @@
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 
-
-import rospy
-from std_msgs.msg import Header, String
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
-
 import argparse
 import os
 import sys
