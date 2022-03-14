@@ -26,18 +26,15 @@ from utils.torch_utils import select_device, time_sync
 
 class Detector:
     def __init__(self):
-        FILE = Path(__file__).resolve()
-        ROOT = FILE.parents[0]  # YOLOv5 root directory
-        if str(ROOT) not in sys.path:
-            sys.path.append(str(ROOT))  # add ROOT to PATH
-        ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+        # Get parameters
+        self.image_topic = rospy.get_param('~image_topic')      # image topic to subscribe
+        self.weights = rospy.get_param('~weights')              # model.pt path(s)
+        self.data = rospy.get_param('~data')                    # dataset.yaml path
+        self.conf_thres = rospy.get_param('~conf_thres', 0.25)  # confidence threshold
+        self.w = rospy.get_param('~width', 640)                 # Width
+        self.h = rospy.get_param('~height', 480)                # Height
+        self.imgsz = (self.h, self.w)                           # inference size (height, width)
 
-        self.weights=ROOT / 'yolov5s_person.pt'  # model.pt path(s)
-        self.data=ROOT / 'data/coco128.yaml'  # dataset.yaml path
-        self.imgsz=(480, 640)  # inference size (height, width)
-        self.w = 640    # Width
-        self.h = 480    # Height
-        self.conf_thres=0.25  # confidence threshold
         self.iou_thres=0.45  # NMS IOU threshold
         self.max_det=1000  # maximum detections per image
         self.classes=None  # filter by class: --class 0, or --class 0 2 3
@@ -65,9 +62,7 @@ class Detector:
         # Run inference
         self.model.warmup(imgsz=(1, 3, *imgsz), half=self.half)  # warmup
         
-        rospy.Subscriber('/camera/color/image_raw', Image, self.Detector)
-        #rospy.Subscriber('/usb_cam/image_raw', Image, self.Detector)
-        #self.repub_image = rospy.Publisher('/re_image', Image, queue_size=1)
+        rospy.Subscriber(self.image_topic, Image, self.Detector)
         self.pub_detected_img = rospy.Publisher('/detected_img', Image, queue_size=1)
         self.pub_bbxes = rospy.Publisher('/bounding_box_array', BoundingBoxes, queue_size=1)
         
@@ -85,8 +80,8 @@ class Detector:
         #cv_img = np.frombuffer(img_data.data, dtype=np.uint8).reshape(img_data.height, img_data.width, -1)
         
         # Image test
-        cv2.imshow("D435i Image", cv_img)
-        cv2.waitKey(1)
+        #cv2.imshow("D435i Image", cv_img)
+        #cv2.waitKey(1)
         
         # Incference with cv_img
         im = cv_img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB
@@ -147,7 +142,6 @@ class Detector:
             # Stream results
             im0 = annotator.result()
             self.pub_detected_img.publish(bridge.cv2_to_imgmsg(im0, encoding="bgr8"))
-            #self.pub_detected_img.publish(img_data)
             cv2.imshow('result', im0)
             cv2.waitKey(1)  # 1 millisecond
 

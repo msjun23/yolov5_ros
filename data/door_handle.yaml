@@ -1,0 +1,7 @@
+path: ../datasets/door_handle  # dataset root dir
+train: train/images  # train images (relative to 'path')
+val: valid/images    # validation images (relative to 'path')
+
+nc: 4
+names: ['door', 'handle', 'cabinet door', 'refrigerator door']
+
