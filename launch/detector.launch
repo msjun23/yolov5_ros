@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-    <arg name="weights_name"    default="yolov5s_person" />
+    <arg name="weights_name"    default="yolov5s_door" />
     <arg name="data_name"       default="door_handle" />
 
     <!-- Camera topic and weights, config arguments -->

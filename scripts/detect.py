@@ -46,6 +46,7 @@ class Detector:
         self.dnn=False  # use OpenCV DNN for ONNX inference
         
         # Load model
+        rospy.loginfo("Loading model...")
         self.device = select_device('') # cuda device, i.e. 0 or 0,1,2,3 or cpu
         self.model = DetectMultiBackend(self.weights, device=self.device, dnn=self.dnn, data=self.data)
         stride, self.names, pt, jit, onnx, engine = self.model.stride, self.model.names, self.model.pt, self.model.jit, self.model.onnx, self.model.engine
@@ -121,7 +122,7 @@ class Detector:
                     label = None if self.hide_labels else (self.names[c] if self.hide_conf else f'{self.names[c]} {conf:.2f}')
                     annotator.box_label(xyxy, label, color=colors(c, True))
                     
-                    # BoundingBox ROS topic                    
+                    # BoundingBox ROS topic
                     bbx = BoundingBox()
                     bbx.Class = self.names[c]
                     bbx.probability = float(f'{conf:.2f}')
@@ -138,6 +139,7 @@ class Detector:
                 
                 # Publish BoundingBoxes topic
                 self.pub_bbxes.publish(bbx_arr)
+                rospy.loginfo("Detected %d objects", cnt)
 
             # Stream results
             im0 = annotator.result()
