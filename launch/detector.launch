@@ -3,18 +3,13 @@
     <arg name="weights_name"    default="yolov5s_person" />
     <arg name="data_name"       default="door_handle" />
 
-    <!-- Camera topic and weights, config and classes files -->
+    <!-- Camera topic and weights, config arguments -->
     <arg name="image_topic"     default="/camera/color/image_raw" />
     <arg name="weights"         default="$(find yolov5_ros)/weights/$(arg weights_name).pt" />
     <arg name="data"            default="$(find yolov5_ros)/data/$(arg data_name).yaml" />
     <arg name="width"           default="640" />
     <arg name="height"          default="480" />
     <arg name="conf_thres"      default="0.25" />
-
-    <!-- Published topics -->
-    <arg name="publish_image"	            default="true"/>
-    <arg name="detected_objects_topic"      default="detected_objects_in_image"/>
-    <arg name="detections_image_topic"      default="detections_image_topic"/>
 
     <!-- Node -->
     <node name="detector" pkg="yolov5_ros" type="detect.py" output="screen" respawn="true">
