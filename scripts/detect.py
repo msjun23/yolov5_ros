@@ -28,7 +28,7 @@ class Detector:
     def __init__(self):
         # Get parameters
         self.image_topic = rospy.get_param('~image_topic')      # image topic to subscribe
-        self.weights = rospy.get_param('~weights')              # model.pt path(s)
+        self.weights = rospy.get_param('~weights')              # weight model path(s)
         self.data = rospy.get_param('~data')                    # dataset.yaml path
         self.conf_thres = rospy.get_param('~conf_thres', 0.25)  # confidence threshold
         self.w = rospy.get_param('~width', 640)                 # Width
@@ -47,10 +47,14 @@ class Detector:
         
         # Load model
         rospy.loginfo("Loading model...")
+        rospy.loginfo(self.weights)
         self.device = select_device('') # cuda device, i.e. 0 or 0,1,2,3 or cpu
         self.model = DetectMultiBackend(self.weights, device=self.device, dnn=self.dnn, data=self.data)
         stride, self.names, pt, jit, onnx, engine = self.model.stride, self.model.names, self.model.pt, self.model.jit, self.model.onnx, self.model.engine
-        imgsz = check_img_size(self.imgsz, s=stride)  # check image size
+        if 'engine' in self.weights:    # If using TensorRT
+            imgsz = (640, 640)
+        else:                           # Using .pt
+            imgsz = check_img_size(self.imgsz, s=stride)  # check image size
         
         # Half
         self.half &= (pt or jit or onnx or engine) and self.device.type != 'cpu'  # FP16 supported on limited backends with CUDA
@@ -73,7 +77,10 @@ class Detector:
         bridge = CvBridge()
         try:
             cv_img = bridge.imgmsg_to_cv2(img_data, desired_encoding='bgr8')
-            cv_img = cv2.resize(cv_img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            if 'engine' in self.weights:    # If using TensorRT
+                cv_img = cv2.resize(cv_img, dsize=(640, 640), interpolation=cv2.INTER_AREA)
+            else:
+                cv_img = cv2.resize(cv_img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
         except CvBridgeError as e:
             print(e)
         
