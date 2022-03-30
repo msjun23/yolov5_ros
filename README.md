@@ -20,13 +20,13 @@ Based on [YOLOv5](https://github.com/ultralytics/yolov5).
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-    <arg name="weights_name"    default="yolov5s_door" />
-    <arg name="data_name"       default="door_handle" />
+    <arg name="weights_name"    default="yolov5s_door.pt" />
+    <arg name="data_name"       default="door_handle.yaml" />
 
     <!-- Camera topic and weights, config arguments -->
     <arg name="image_topic"     default="/camera/color/image_raw" />
-    <arg name="weights"         default="$(find yolov5_ros)/weights/$(arg weights_name).pt" />
-    <arg name="data"            default="$(find yolov5_ros)/data/$(arg data_name).yaml" />
+    <arg name="weights"         default="$(find yolov5_ros)/weights/$(arg weights_name)" />
+    <arg name="data"            default="$(find yolov5_ros)/data/$(arg data_name)" />
     <arg name="width"           default="640" />
     <arg name="height"          default="480" />
     <arg name="conf_thres"      default="0.25" />
@@ -41,6 +41,7 @@ Based on [YOLOv5](https://github.com/ultralytics/yolov5).
         <param name="conf_thres"    value="$(arg conf_thres)" />
     </node>
 </launch>
+
 ```
 
 Change arguments, "weights_name", "data_name" to yours. Also change "image_topic" too. Or you can just declare argument when you launch the launch file.
