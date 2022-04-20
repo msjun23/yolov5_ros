@@ -133,10 +133,17 @@ class Detector:
                     bbx = BoundingBox()
                     bbx.Class = self.names[c]
                     bbx.probability = float(f'{conf:.2f}')
-                    bbx.xmin = int(xyxy[0].item())
-                    bbx.ymin = int(xyxy[1].item())
-                    bbx.xmax = int(xyxy[2].item())
-                    bbx.ymax = int(xyxy[3].item())
+                    if 'engine' in self.weights:    # If using TensorRT
+                        # 640x640 -> 640x480
+                        bbx.xmin = int(xyxy[0].item())
+                        bbx.ymin = int(480/640 * xyxy[1].item())
+                        bbx.xmax = int(xyxy[2].item())
+                        bbx.ymax = int(480/640 * xyxy[3].item())
+                    else:
+                        bbx.xmin = int(xyxy[0].item())
+                        bbx.ymin = int(xyxy[1].item())
+                        bbx.xmax = int(xyxy[2].item())
+                        bbx.ymax = int(xyxy[3].item())
                     
                     # BoundingBoxes ROS topic
                     bbx_arr.header = img_data.header
@@ -150,6 +157,7 @@ class Detector:
 
             # Stream results
             im0 = annotator.result()
+            # im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
             self.pub_detected_img.publish(bridge.cv2_to_imgmsg(im0, encoding="bgr8"))
             cv2.imshow('result', im0)
             cv2.waitKey(1)  # 1 millisecond
