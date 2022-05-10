@@ -71,6 +71,12 @@ $ roslaunch yolov5_ros detector.launch weights_name:=${your weight file name} da
 >>>
 >>> int64 ymax
 
+# TensorRT
+If you want to use tensorrt model, file name "~~.engine", you have to check tensorrt version. If tensorrt version is mismatched, would face **serialization** error like this.
 
+```bash
+Serialization (Serialization assertion safeVersionRead == safeSerializationVersion failed.Version tag does not match.
+```
 
+So, it is recommended that make your own tenorrt model at your PC, with following this [doc](https://github.com/ultralytics/yolov5/issues/251).
 
