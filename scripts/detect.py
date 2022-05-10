@@ -2,6 +2,9 @@
 
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 
+import gi
+gi.require_version('Gtk', '2.0')
+
 import rospy
 from std_msgs.msg import Header, String
 from sensor_msgs.msg import Image
