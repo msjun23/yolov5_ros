@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-    <arg name="weights_name"    default="yolov5s_door_nuri.engine" />
+    <arg name="weights_name"    default="yolov5s_door_nuri_sim.engine" />
     <arg name="data_name"       default="door_handle.yaml" />
 
     <!-- Camera topic and weights, config arguments -->
