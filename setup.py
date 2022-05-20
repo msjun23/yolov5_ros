@@ -1,11 +1,14 @@
 from setuptools import setup
 
 package_name = 'yolov5_ros'
+data = 'yolov5_ros/data'
+models = 'yolov5_ros/models'
+utils = 'yolov5_ros/utils'
 
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name],
+    packages=[package_name, data, models, utils],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
