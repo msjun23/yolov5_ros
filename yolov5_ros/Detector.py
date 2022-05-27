@@ -155,7 +155,7 @@ class Detector(Node):
             im0 = annotator.result()
             # im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
             self.pub_detected_img.publish(bridge.cv2_to_imgmsg(im0, encoding="bgr8"))
-            cv2.imshow('result', im0)
+            cv2.imshow('yolov5_result', im0)
             cv2.waitKey(1)  # 1 millisecond
             
         # self.pub_detected_img.publish(img_data)
