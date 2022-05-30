@@ -3,7 +3,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-# from yolov5_ros.msg import BoundingBox, BoundingBoxes
+from custom_msg.msg import BoundingBox, BoundingBoxes
 
 import argparse
 import os
@@ -33,9 +33,9 @@ class Detector(Node):
         super().__init__('Detector')
         
         # Get parameters
-        self.image_topic = '/camera/image_raw'      # image topic to subscribe
-        self.weights = 'yolov5s_person.pt'          # weight model path(s)
-        self.data = 'data/PascalVOC_person.yaml'    # dataset.yaml path
+        self.image_topic = '/turtlebot/camera/image_raw'      # image topic to subscribe
+        self.weights = '/home/msjun-ubuntu/colcon_ws/src/RobotProgramming-project/yolov5_ros/yolov5_ros/yolov5s_person.pt'          # weight model path(s)
+        self.data = '/home/msjun-ubuntu/colcon_ws/src/RobotProgramming-project/yolov5_ros/yolov5_ros/data/PascalVOC_person.yaml'    # dataset.yaml path
         self.conf_thres = 0.25                      # confidence threshold
         self.w = 640                                # Width
         self.h = 480                                # Height
@@ -73,8 +73,9 @@ class Detector(Node):
         # Run inference
         self.model.warmup(imgsz=(1, 3, *imgsz))  # warmup
         
-        self.sub_img = self.create_subscription(Image, '/camera/image_raw', self.Detector, 10)
+        self.sub_img = self.create_subscription(Image, self.image_topic, self.Detector, 10)
         self.pub_detected_img = self.create_publisher(Image, '/detected_img', 10)
+        self.pub_bbxes = self.create_publisher(BoundingBoxes, '/bounding_box_array', 10)
         
     def Detector(self, img_data):
         bridge = CvBridge()
@@ -118,7 +119,7 @@ class Detector(Node):
 
                 # Write results
                 cnt = 0
-                # bbx_arr = BoundingBoxes()
+                bbx_arr = BoundingBoxes()
                 for *xyxy, conf, cls in reversed(det):
                     # Add bbox to image
                     c = int(cls)  # integer class
@@ -126,34 +127,34 @@ class Detector(Node):
                     annotator.box_label(xyxy, label, color=colors(c, True))
                     
                     # BoundingBox ROS topic
-                    # bbx = BoundingBox()
-                    # bbx.Class = self.names[c]
-                    # bbx.probability = float(f'{conf:.2f}')
-                    # if 'engine' in self.weights:    # If using TensorRT
-                    #     # 640x640 -> 640x480
-                    #     bbx.xmin = int(xyxy[0].item())
-                    #     bbx.ymin = int(480/640 * xyxy[1].item())
-                    #     bbx.xmax = int(xyxy[2].item())
-                    #     bbx.ymax = int(480/640 * xyxy[3].item())
-                    # else:
-                    #     bbx.xmin = int(xyxy[0].item())
-                    #     bbx.ymin = int(xyxy[1].item())
-                    #     bbx.xmax = int(xyxy[2].item())
-                    #     bbx.ymax = int(xyxy[3].item())
+                    bbx = BoundingBox()
+                    bbx.classname = self.names[c]
+                    bbx.probability = float(f'{conf:.2f}')
+                    if 'engine' in self.weights:    # If using TensorRT
+                        # 640x640 -> 640x480
+                        bbx.xmin = int(xyxy[0].item())
+                        bbx.ymin = int(480/640 * xyxy[1].item())
+                        bbx.xmax = int(xyxy[2].item())
+                        bbx.ymax = int(480/640 * xyxy[3].item())
+                    else:
+                        bbx.xmin = int(xyxy[0].item())
+                        bbx.ymin = int(xyxy[1].item())
+                        bbx.xmax = int(xyxy[2].item())
+                        bbx.ymax = int(xyxy[3].item())
                     
                     # BoundingBoxes ROS topic
                     # bbx_arr.header = img_data.header
-                    # bbx_arr.bounding_boxes.append(bbx)
+                    bbx_arr.bounding_boxes.append(bbx)
                     
                     cnt = cnt + 1
                 
                 # Publish BoundingBoxes topic
-                # self.pub_bbxes.publish(bbx_arr)
+                self.pub_bbxes.publish(bbx_arr)
                 print('Detected ', cnt, ' objects')
 
             # Stream results
             im0 = annotator.result()
-            # im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
             self.pub_detected_img.publish(bridge.cv2_to_imgmsg(im0, encoding="bgr8"))
             cv2.imshow('yolov5_result', im0)
             cv2.waitKey(1)  # 1 millisecond
