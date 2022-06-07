@@ -116,6 +116,11 @@ class Detector:
             # det: [[xmin, ymin, xmax, ymax, probability, label],
             #       [xmin, ymin, xmax, ymax, probability, label], ...]
             
+            # BoundingBoxes ROS topic
+            bbx_arr = BoundingBoxes()
+            bbx_arr.header = img_data.header
+            cnt = 0
+            
             # batch_size >= 1
             im0 = cv_img
             annotator = Annotator(im0, line_width=self.line_thickness, example=str(self.names))
@@ -124,8 +129,7 @@ class Detector:
                 det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
 
                 # Write results
-                cnt = 0
-                bbx_arr = BoundingBoxes()
+                # bbx_arr.bounding_boxes.clear()
                 for *xyxy, conf, cls in reversed(det):
                     # Add bbox to image
                     c = int(cls)  # integer class
@@ -148,24 +152,22 @@ class Detector:
                         bbx.xmax = int(xyxy[2].item())
                         bbx.ymax = int(xyxy[3].item())
                     
-                    # BoundingBoxes ROS topic
-                    bbx_arr.header = img_data.header
+                    # Add bounding box to array
                     bbx_arr.bounding_boxes.append(bbx)
-                    
                     cnt = cnt + 1
-                
-                # Publish BoundingBoxes topic
-                self.pub_bbxes.publish(bbx_arr)
-                rospy.loginfo("Detected %d objects", cnt)
-
+                    
             # Stream results
             im0 = annotator.result()
-            # im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
             self.pub_detected_img.publish(bridge.cv2_to_imgmsg(im0, encoding="bgr8"))
             cv2.imshow('result', im0)
             cv2.waitKey(1)  # 1 millisecond
-
-
+            
+            # Publish BoundingBoxes topic
+            self.pub_bbxes.publish(bbx_arr)
+            rospy.loginfo("Detected %d objects", cnt)
+            
+            
 if __name__ == "__main__":
     rospy.init_node('DoorDetector')
     

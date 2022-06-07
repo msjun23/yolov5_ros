@@ -4,7 +4,7 @@
     <arg name="data_name"       default="door_handle.yaml" />
 
     <!-- Camera topic and weights, config arguments -->
-    <arg name="image_topic"     default="/d435/color/image_raw" />
+    <arg name="image_topic"     default="/camera/color/image_raw" />
     <arg name="weights"         default="$(find yolov5_ros)/weights/$(arg weights_name)" />
     <arg name="data"            default="$(find yolov5_ros)/data/$(arg data_name)" />
     <arg name="width"           default="640" />
