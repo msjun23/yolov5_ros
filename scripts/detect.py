@@ -169,7 +169,7 @@ class Detector:
             
             
 if __name__ == "__main__":
-    rospy.init_node('DoorDetector')
+    rospy.init_node('Detector')
     
     detector = Detector()
     

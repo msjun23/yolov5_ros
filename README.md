@@ -5,6 +5,8 @@ yolov5 with ROS
 |||
 |---|---|
 |**OS**|Ubuntu 18.04|
+|**CUDA**|10.2|
+|**Pytorch version**|1.8|
 |**ROS version**|Melodic|
 |**Language**|Python3|
 
