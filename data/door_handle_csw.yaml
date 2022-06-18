@@ -1,0 +1,6 @@
+path: ../datasets/door_handle_csw  # dataset root dir
+train: train/images
+val: valid/images
+
+nc: 3
+names: ['10deok', 'door', 'handle']

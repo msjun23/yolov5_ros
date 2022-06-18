@@ -47,6 +47,7 @@ class Detector:
         self.hide_conf=False  # hide confidences
         self.half=False  # use FP16 half-precision inference
         self.dnn=False  # use OpenCV DNN for ONNX inference
+        self.cnt = 1
         
         # Load model
         rospy.loginfo("Loading model...")
@@ -77,96 +78,101 @@ class Detector:
         rospy.spin()
 
     def Detector(self, img_data):
-        bridge = CvBridge()
-        try:
-            cv_img = bridge.imgmsg_to_cv2(img_data, desired_encoding='bgr8')
-            if 'engine' in self.weights:    # If using TensorRT
-                cv_img = cv2.resize(cv_img, dsize=(640, 640), interpolation=cv2.INTER_AREA)
-            else:
-                cv_img = cv2.resize(cv_img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
-        except CvBridgeError as e:
-            print(e)
-        
-        # By numpy method
-        #cv_img = np.frombuffer(img_data.data, dtype=np.uint8).reshape(img_data.height, img_data.width, -1)
-        
-        # Image test
-        #cv2.imshow("D435i Image", cv_img)
-        #cv2.waitKey(1)
-        
-        # Incference with cv_img
-        im = cv_img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB
-        im = np.reshape(im, ((1,) + im.shape))
-        im = np.ascontiguousarray(im)
-        
-        im = torch.from_numpy(im).to(self.device)
-        im = im.half() if self.half else im.float()  # uint8 to fp16/32
-        im /= 255  # 0 - 255 to 0.0 - 1.0
-        if len(im.shape) == 3:
-            im = im[None]  # expand for batch dim
+        if self.cnt < 3:
+            self.cnt += 1
+            bridge = CvBridge()
+            try:
+                cv_img = bridge.imgmsg_to_cv2(img_data, desired_encoding='bgr8')
+                if 'engine' in self.weights:    # If using TensorRT
+                    cv_img = cv2.resize(cv_img, dsize=(640, 640), interpolation=cv2.INTER_AREA)
+                else:
+                    cv_img = cv2.resize(cv_img, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+            except CvBridgeError as e:
+                print(e)
             
-        # Inference
-        pred = self.model(im, augment=False, visualize=False)
-        
-        # NMS
-        pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms, max_det=self.max_det)
-        
-        # Process predictions
-        for i, det in enumerate(pred):  # per image
-            # det: [[xmin, ymin, xmax, ymax, probability, label],
-            #       [xmin, ymin, xmax, ymax, probability, label], ...]
+            # By numpy method
+            #cv_img = np.frombuffer(img_data.data, dtype=np.uint8).reshape(img_data.height, img_data.width, -1)
             
-            # BoundingBoxes ROS topic
-            bbx_arr = BoundingBoxes()
-            bbx_arr.header = img_data.header
-            cnt = 0
+            # Image test
+            #cv2.imshow("D435i Image", cv_img)
+            #cv2.waitKey(1)
             
-            # batch_size >= 1
-            im0 = cv_img
-            annotator = Annotator(im0, line_width=self.line_thickness, example=str(self.names))
-            if len(det):
-                # Rescale boxes from img_size to im0 size
-                det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
+            # Incference with cv_img
+            im = cv_img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB
+            im = np.reshape(im, ((1,) + im.shape))
+            im = np.ascontiguousarray(im)
+            
+            im = torch.from_numpy(im).to(self.device)
+            im = im.half() if self.half else im.float()  # uint8 to fp16/32
+            im /= 255  # 0 - 255 to 0.0 - 1.0
+            if len(im.shape) == 3:
+                im = im[None]  # expand for batch dim
+                
+            # Inference
+            pred = self.model(im, augment=False, visualize=False)
+            
+            # NMS
+            pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms, max_det=self.max_det)
+            
+            # Process predictions
+            for i, det in enumerate(pred):  # per image
+                # det: [[xmin, ymin, xmax, ymax, probability, label],
+                #       [xmin, ymin, xmax, ymax, probability, label], ...]
+                
+                # BoundingBoxes ROS topic
+                bbx_arr = BoundingBoxes()
+                bbx_arr.header = img_data.header
+                cnt = 0
+                
+                # batch_size >= 1
+                im0 = cv_img
+                annotator = Annotator(im0, line_width=self.line_thickness, example=str(self.names))
+                if len(det):
+                    # Rescale boxes from img_size to im0 size
+                    det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
 
-                # Write results
-                # bbx_arr.bounding_boxes.clear()
-                for *xyxy, conf, cls in reversed(det):
-                    # Add bbox to image
-                    c = int(cls)  # integer class
-                    label = None if self.hide_labels else (self.names[c] if self.hide_conf else f'{self.names[c]} {conf:.2f}')
-                    annotator.box_label(xyxy, label, color=colors(c, True))
+                    # Write results
+                    # bbx_arr.bounding_boxes.clear()
+                    for *xyxy, conf, cls in reversed(det):
+                        # Add bbox to image
+                        c = int(cls)  # integer class
+                        label = None if self.hide_labels else (self.names[c] if self.hide_conf else f'{self.names[c]} {conf:.2f}')
+                        annotator.box_label(xyxy, label, color=colors(c, True))
+                        
+                        # BoundingBox ROS topic
+                        bbx = BoundingBox()
+                        bbx.Class = self.names[c]
+                        bbx.probability = float(f'{conf:.2f}')
+                        if 'engine' in self.weights:    # If using TensorRT
+                            # 640x640 -> 640x480
+                            bbx.xmin = int(xyxy[0].item())
+                            bbx.ymin = int(480/640 * xyxy[1].item())
+                            bbx.xmax = int(xyxy[2].item())
+                            bbx.ymax = int(480/640 * xyxy[3].item())
+                        else:
+                            bbx.xmin = int(xyxy[0].item())
+                            bbx.ymin = int(xyxy[1].item())
+                            bbx.xmax = int(xyxy[2].item())
+                            bbx.ymax = int(xyxy[3].item())
+                        
+                        # Add bounding box to array
+                        bbx_arr.bounding_boxes.append(bbx)
+                        cnt = cnt + 1
+                        
+                # Stream results
+                im0 = annotator.result()
+                im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+                self.pub_detected_img.publish(bridge.cv2_to_imgmsg(im0, encoding="bgr8"))
+                #cv2.imshow('result', im0)
+                #cv2.waitKey(1)  # 1 millisecond
+                
+                # Publish BoundingBoxes topic
+                self.pub_bbxes.publish(bbx_arr)
+                rospy.loginfo("Detected %d objects", cnt)
+        else:
+            self.cnt = 1
+            pass
                     
-                    # BoundingBox ROS topic
-                    bbx = BoundingBox()
-                    bbx.Class = self.names[c]
-                    bbx.probability = float(f'{conf:.2f}')
-                    if 'engine' in self.weights:    # If using TensorRT
-                        # 640x640 -> 640x480
-                        bbx.xmin = int(xyxy[0].item())
-                        bbx.ymin = int(480/640 * xyxy[1].item())
-                        bbx.xmax = int(xyxy[2].item())
-                        bbx.ymax = int(480/640 * xyxy[3].item())
-                    else:
-                        bbx.xmin = int(xyxy[0].item())
-                        bbx.ymin = int(xyxy[1].item())
-                        bbx.xmax = int(xyxy[2].item())
-                        bbx.ymax = int(xyxy[3].item())
-                    
-                    # Add bounding box to array
-                    bbx_arr.bounding_boxes.append(bbx)
-                    cnt = cnt + 1
-                    
-            # Stream results
-            im0 = annotator.result()
-            im0 = cv2.resize(im0, dsize=(640, 480), interpolation=cv2.INTER_AREA)
-            self.pub_detected_img.publish(bridge.cv2_to_imgmsg(im0, encoding="bgr8"))
-            cv2.imshow('result', im0)
-            cv2.waitKey(1)  # 1 millisecond
-            
-            # Publish BoundingBoxes topic
-            self.pub_bbxes.publish(bbx_arr)
-            rospy.loginfo("Detected %d objects", cnt)
-            
             
 if __name__ == "__main__":
     rospy.init_node('Detector')
