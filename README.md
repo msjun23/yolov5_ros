@@ -12,4 +12,4 @@ Based on [YOLOv5](https://github.com/ultralytics/yolov5).
 
 ---
 
-# Base content is similar to the main branch
+Base content is similar to the main branch
